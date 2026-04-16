@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sp-header">
+    <div class="sp-title">
+      <span class="sp-logo">SE</span>
+      Selector History
+    </div>
+    <div class="sp-actions">
+      <button id="btnClearAll" class="sp-btn sp-btn-ghost" title="전체 삭제">Clear</button>
+      <button id="btnExportJson" class="sp-btn sp-btn-ghost" title="JSON 내보내기">JSON</button>
+      <button id="btnExportCsv" class="sp-btn sp-btn-ghost" title="CSV 내보내기">CSV</button>
+    </div>
+  </div>
+
+  <div class="sp-search-area">
+    <input type="text" id="searchInput" class="sp-search" placeholder="셀렉터 검색...">
+  </div>
+
+  <div class="sp-stats">
+    <span id="statsCount">0개 항목</span>
+    <span id="statsPage"></span>
+  </div>
+
+  <div id="historyList" class="sp-history-list">
+    <div class="sp-empty">
+      <div class="sp-empty-icon">&#128270;</div>
+      <div class="sp-empty-text">엘리먼트를 클릭하면<br>셀렉터가 여기에 쌓입니다</div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

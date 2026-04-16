@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA 자동화를 위한 셀렉터 추출 크롬 확장 프로그램 만들기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f6f8;
+      --bg-tertiary: #eef0f4;
+      --bg-code: #f5f5f5;
+      --border: #e0e3e8;
+      --text-primary: #1a1a2e;
+      --text-secondary: #4a5568;
+      --text-muted: #718096;
+      --accent-blue: #2563eb;
+      --accent-green: #16a34a;
+      --accent-orange: #d97706;
+      --accent-red: #dc2626;
+      --accent-purple: #7c3aed;
+      --accent-cyan: #0891b2;
+      --inline-code-bg: #f0f2f5;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.8;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* === Header / Hero === */
+    .hero {
+      position: relative;
+      padding: 80px 0 60px;
+      text-align: center;
+      background: linear-gradient(180deg, #f0f4f8 0%, var(--bg-primary) 100%);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 300px at 50% 0%, rgba(37,99,235,0.06) 0%, transparent 100%),
+        radial-gradient(ellipse 400px 200px at 30% 80%, rgba(22,163,74,0.04) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border: 1px solid var(--accent-green);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent-green);
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero h1 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 900;
+      line-height: 1.3;
+      margin-bottom: 16px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0 20px;
+    }
+
+    .hero h1 .highlight {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-meta {
+      color: var(--text-secondary);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* === Layout === */
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    article {
+      padding: 60px 0 100px;
+    }
+
+    /* === Typography === */
+    h2 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-top: 64px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+
+    h2 .section-number {
+      color: var(--accent-blue);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 40px;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      line-height: 1.85;
+    }
+
+    strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    ul, ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* === Code === */
+    code {
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      font-size: 0.875em;
+    }
+
+    :not(pre) > code {
+      background: var(--inline-code-bg);
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: var(--accent-cyan);
+      border: 1px solid var(--border);
+    }
+
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    pre .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      border-radius: 8px 8px 0 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    pre .code-header .lang {
+      color: var(--accent-blue);
+      font-weight: 500;
+    }
+
+    pre code {
+      display: block;
+      padding: 16px 20px;
+      line-height: 1.6;
+      font-size: 13.5px;
+      color: var(--text-primary);
+      white-space: pre;
+    }
+
+    /* syntax colors */
+    .kw { color: var(--accent-purple); }
+    .fn { color: #7c3aed; }
+    .str { color: #0369a1; }
+    .cm { color: var(--text-muted); font-style: italic; }
+    .num { color: var(--accent-orange); }
+    .op { color: var(--accent-red); }
+    .type { color: var(--accent-cyan); }
+    .prop { color: #2563eb; }
+
+    /* === Callout / Info Box === */
+    .callout {
+      border-left: 3px solid var(--accent-blue);
+      background: rgba(37, 99, 235, 0.05);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 24px;
+    }
+
+    .callout.warning {
+      border-left-color: var(--accent-orange);
+      background: rgba(217, 119, 6, 0.05);
+    }
+
+    .callout.success {
+      border-left-color: var(--accent-green);
+      background: rgba(22, 163, 74, 0.05);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .callout p {
+      margin-bottom: 0;
+      font-size: 14px;
+    }
+
+    /* === Diagram / Flow === */
+    .flow-diagram {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      padding: 32px 16px;
+      margin-bottom: 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 120px;
+      flex-shrink: 0;
+    }
+
+    .flow-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .flow-icon.blue { background: rgba(37,99,235,0.1); }
+    .flow-icon.green { background: rgba(22,163,74,0.1); }
+    .flow-icon.purple { background: rgba(124,58,237,0.1); }
+    .flow-icon.orange { background: rgba(217,119,6,0.1); }
+
+    .flow-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .flow-arrow {
+      font-size: 20px;
+      color: var(--text-muted);
+      margin: 0 4px;
+      flex-shrink: 0;
+      height: 52px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* === Priority Table === */
+    .priority-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .priority-table th {
+      background: var(--bg-tertiary);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .priority-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .priority-table tr:hover td {
+      background: rgba(37,99,235,0.04);
+    }
+
+    .priority-table .rank {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+
+    .stability-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .stability-badge.high {
+      background: rgba(22,163,74,0.12);
+      color: var(--accent-green);
+    }
+
+    .stability-badge.medium {
+      background: rgba(217,119,6,0.12);
+      color: var(--accent-orange);
+    }
+
+    .stability-badge.low {
+      background: rgba(220,38,38,0.12);
+      color: var(--accent-red);
+    }
+
+    /* === TOC === */
+    .toc {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-bottom: 48px;
+    }
+
+    .toc-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .toc ol {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 0;
+    }
+
+    .toc li {
+      margin-bottom: 6px;
+    }
+
+    .toc a {
+      color: var(--text-secondary);
+      font-size: 15px;
+      transition: color 0.15s;
+    }
+
+    .toc a:hover {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    .toc a .toc-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--accent-blue);
+      margin-right: 8px;
+    }
+
+    /* === Footer === */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    footer .tech-stack {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    footer .tech-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+    }
+
+    /* === Responsive === */
+    @media (max-width: 640px) {
+      .hero { padding: 48px 0 36px; }
+      h2 { font-size: 22px; margin-top: 48px; }
+      pre code { font-size: 12.5px; padding: 12px 14px; }
+      .flow-diagram { padding: 20px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">Chrome Extension / Manifest V3</div>
+      <h1>QA 자동화를 위한<br><span class="highlight">셀렉터 추출 크롬 확장 프로그램</span> 만들기</h1>
+      <div class="hero-meta">
+        <span>2026.04.02</span>
+        <span>&#183;</span>
+        <span>Selector Extractor v1.1.0</span>
+        <span>&#183;</span>
+        <span>15 min read</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Article -->
+  <article>
+    <div class="container">
+
+      <!-- TOC -->
+      <nav class="toc">
+        <div class="toc-title">목차</div>
+        <ol>
+          <li><a href="#motivation"><span class="toc-num">01</span>왜 만들었나 - DevTools에서 셀렉터 뽑다 지친 이유</a></li>
+          <li><a href="#how-it-works"><span class="toc-num">02</span>동작 흐름 - 클릭 한 번으로 셀렉터 추출</a></li>
+          <li><a href="#architecture"><span class="toc-num">03</span>핵심 기술 - Manifest V3 아키텍처</a></li>
+          <li><a href="#selector-engine"><span class="toc-num">04</span>셀렉터 엔진 - 우선순위 알고리즘</a></li>
+          <li><a href="#unique-sort"><span class="toc-num">05</span>유니크 셀렉터 우선 정렬이 중요한 이유</a></li>
+          <li><a href="#playwright"><span class="toc-num">06</span>Playwright 코드 자동 생성</a></li>
+          <li><a href="#export"><span class="toc-num">07</span>JSON / CSV 내보내기</a></li>
+          <li><a href="#lessons"><span class="toc-num">08</span>개발 과정에서 배운 점</a></li>
+        </ol>
+      </nav>
+
+      <!-- Section 1 -->
+      <h2 id="motivation"><span class="section-number">01</span>왜 만들었나</h2>
+
+      <p>
+        QA 자동화 테스트 코드를 작성할 때 가장 반복적이고 시간을 잡아먹는 작업이 뭘까?
+        바로 <strong>엘리먼트 셀렉터를 뽑아내는 일</strong>이다.
+      </p>
+
+      <p>
+        DevTools를 열고, Elements 탭에서 엘리먼트를 찾고, 적절한 셀렉터를 조합하고,
+        그게 유니크한지 Console 탭에서 <code>document.querySelectorAll()</code>로 확인하고...
+        한 페이지에 엘리먼트가 20개만 돼도 이 과정이 고통스러워진다.
+      </p>
+
+      <div class="callout warning">
+        <div class="callout-title">기존 워크플로우의 문제</div>
+        <p>
+          DevTools 열기 &rarr; Elements 탭 &rarr; 엘리먼트 검색 &rarr; 속성 확인 &rarr;
+          Console에서 유니크 여부 확인 &rarr; 셀렉터 복사 &rarr; 테스트 코드에 붙여넣기.
+          엘리먼트 하나에 <strong>최소 30초~1분</strong>이 소요된다.
+        </p>
+      </div>
+
+      <p>
+        이걸 <strong>"클릭 한 번"</strong>으로 줄일 수 없을까? 라는 생각에서
+        <strong>Selector Extractor</strong> 크롬 확장 프로그램을 만들었다.
+        클릭하면 말풍선에 셀렉터 목록이 뜨고, 유니크한 것이 상단에 정렬되고,
+        Playwright 코드까지 자동으로 생성해준다.
+      </p>
+
+      <!-- Section 2 -->
+      <h2 id="how-it-works"><span class="section-number">02</span>동작 흐름</h2>
+
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon blue">&#9881;</div>
+          <div class="flow-label">확장 프로그램 활성화</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-icon green">&#128433;</div>
+          <div class="flow-label">엘리먼트 클릭</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-icon purple">&#9889;</div>
+          <div class="flow-label">셀렉터 추출 + 말풍선</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-icon orange">&#128203;</div>
+          <div class="flow-label">사이드 패널 히스토리</div>
+        </div>
+      </div>
+
+      <ol>
+        <li><strong>활성화</strong> - 팝업에서 토글 버튼을 클릭하면 Content Script가 활성화된다.</li>
+        <li><strong>하이라이트</strong> - 마우스를 올리면 해당 엘리먼트가 파란 테두리로 하이라이트된다.</li>
+        <li><strong>클릭 &rarr; 추출</strong> - 엘리먼트를 클릭하면 <code>SelectorEngine.extract()</code>가 7종류의 셀렉터를 한꺼번에 추출한다.</li>
+        <li><strong>말풍선 표시</strong> - 추출된 셀렉터들이 우선순위대로 말풍선에 표시된다. 각 항목 옆에 Copy 버튼이 있다.</li>
+        <li><strong>사이드 패널 히스토리</strong> - Background Service Worker를 통해 추출 결과가 사이드 패널로 전달되어 히스토리에 쌓인다.</li>
+      </ol>
+
+      <!-- Section 3 -->
+      <h2 id="architecture"><span class="section-number">03</span>핵심 기술 - Manifest V3 아키텍처</h2>
+
+      <p>
+        Chrome의 <strong>Manifest V3</strong> 스펙에 맞춰 설계했다. 구성 요소는 크게 4가지다.
+      </p>
+
+      <pre>
+        <div class="code-header"><span class="lang">json</span><span>manifest.json</span></div>
+        <code>{
+  <span class="prop">"manifest_version"</span>: <span class="num">3</span>,
+  <span class="prop">"permissions"</span>: [<span class="str">"activeTab"</span>, <span class="str">"sidePanel"</span>, <span class="str">"storage"</span>, <span class="str">"clipboardWrite"</span>],
+  <span class="prop">"content_scripts"</span>: [{
+    <span class="prop">"js"</span>: [<span class="str">"lib/selector-engine.js"</span>, <span class="str">"content.js"</span>],
+    <span class="prop">"css"</span>: [<span class="str">"styles/content.css"</span>],
+    <span class="prop">"run_at"</span>: <span class="str">"document_idle"</span>
+  }],
+  <span class="prop">"background"</span>: { <span class="prop">"service_worker"</span>: <span class="str">"background.js"</span> },
+  <span class="prop">"side_panel"</span>: { <span class="prop">"default_path"</span>: <span class="str">"sidepanel.html"</span> }
+}</code>
+      </pre>
+
+      <h3>컴포넌트 역할</h3>
+
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th>컴포넌트</th>
+            <th>파일</th>
+            <th>역할</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Content Script</strong></td>
+            <td><code>content.js</code> + <code>selector-engine.js</code></td>
+            <td>페이지에 주입, 하이라이트/클릭/말풍선 처리</td>
+          </tr>
+          <tr>
+            <td><strong>Background</strong></td>
+            <td><code>background.js</code></td>
+            <td>메시지 브릿지, 탭별 상태 관리</td>
+          </tr>
+          <tr>
+            <td><strong>Side Panel</strong></td>
+            <td><code>sidepanel.js</code></td>
+            <td>히스토리 관리, 검색, 내보내기</td>
+          </tr>
+          <tr>
+            <td><strong>Popup</strong></td>
+            <td><code>popup.js</code></td>
+            <td>ON/OFF 토글 UI</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Manifest V3에서는 Background Page 대신 <strong>Service Worker</strong>를 사용한다.
+        Service Worker는 필요할 때만 깨어나고 유휴 시 자동 종료되므로,
+        상태를 메모리에만 들고 있으면 안 된다. 이 프로젝트에서는 히스토리를
+        <code>chrome.storage.local</code>에 저장하고, 탭 상태만 <code>tabStates</code> 객체로 관리하는 방식을 택했다.
+      </p>
+
+      <div class="callout">
+        <div class="callout-title">메시지 플로우</div>
+        <p>
+          Content Script &xrarr; <code>chrome.runtime.sendMessage</code> &xrarr;
+          Background (브릿지) &xrarr; <code>chrome.runtime.sendMessage</code> &xrarr; Side Panel.
+          Content Script와 Side Panel은 직접 통신할 수 없기 때문에 Background가 중계 역할을 한다.
+        </p>
+      </div>
+
+      <!-- Section 4 -->
+      <h2 id="selector-engine"><span class="section-number">04</span>셀렉터 엔진 - 우선순위 알고리즘</h2>
+
+      <p>
+        핵심은 <code>lib/selector-engine.js</code>의 <code>SelectorEngine.extract()</code> 함수다.
+        하나의 엘리먼트에서 <strong>7가지 타입</strong>의 셀렉터를 동시에 추출한다.
+      </p>
+
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th>우선순위</th>
+            <th>타입</th>
+            <th>예시</th>
+            <th>안정성</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="rank">1</span></td>
+            <td><code>id</code></td>
+            <td><code>#login-btn</code></td>
+            <td><span class="stability-badge high">HIGH</span></td>
+          </tr>
+          <tr>
+            <td><span class="rank">2</span></td>
+            <td><code>data-testid</code></td>
+            <td><code>[data-testid="submit"]</code></td>
+            <td><span class="stability-badge high">HIGH</span></td>
+          </tr>
+          <tr>
+            <td><span class="rank">3</span></td>
+            <td><code>class</code> (unique)</td>
+            <td><code>.user-profile-card</code></td>
+            <td><span class="stability-badge medium">MEDIUM</span></td>
+          </tr>
+          <tr>
+            <td><span class="rank">4</span></td>
+            <td><code>css</code></td>
+            <td><code>div.container > button:nth-of-type(2)</code></td>
+            <td><span class="stability-badge medium">MEDIUM</span></td>
+          </tr>
+          <tr>
+            <td><span class="rank">5</span></td>
+            <td><code>xpath</code></td>
+            <td><code>//div[@id="app"]/form/button[2]</code></td>
+            <td><span class="stability-badge low">LOW</span></td>
+          </tr>
+          <tr>
+            <td><span class="rank">6</span></td>
+            <td><code>role</code></td>
+            <td><code>role=button[name="Submit"]</code></td>
+            <td><span class="stability-badge medium">MEDIUM</span></td>
+          </tr>
+          <tr>
+            <td><span class="rank">7</span></td>
+            <td><code>text</code></td>
+            <td><code>text="로그인"</code></td>
+            <td><span class="stability-badge low">LOW</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>각 추출 함수에는 노이즈를 줄이기 위한 필터링 로직이 있다.</p>
+
+      <pre>
+        <div class="code-header"><span class="lang">javascript</span><span>selector-engine.js - getByUniqueClass()</span></div>
+        <code><span class="kw">function</span> <span class="fn">getByUniqueClass</span>(el) {
+  <span class="kw">const</span> classes = <span class="type">Array</span>.<span class="fn">from</span>(el.classList);
+  <span class="kw">for</span> (<span class="kw">const</span> cls <span class="kw">of</span> classes) {
+    <span class="kw">if</span> (cls.length <span class="op">&lt;</span> <span class="num">3</span>) <span class="kw">continue</span>;          <span class="cm">// 너무 짧은 클래스 무시</span>
+    <span class="kw">if</span> (<span class="str">/^se-/</span>.<span class="fn">test</span>(cls)) <span class="kw">continue</span>;     <span class="cm">// 확장 프로그램 자체 클래스 무시</span>
+    <span class="kw">if</span> (<span class="str">/^[a-z]{1,3}-[a-zA-Z0-9]{5,}$/</span>.<span class="fn">test</span>(cls)) <span class="kw">continue</span>;  <span class="cm">// 해시 기반 동적 클래스</span>
+    <span class="kw">if</span> (<span class="str">/^css-/</span>.<span class="fn">test</span>(cls)) <span class="kw">continue</span>;    <span class="cm">// CSS-in-JS 클래스</span>
+    <span class="kw">if</span> (<span class="str">/^_/</span>.<span class="fn">test</span>(cls)) <span class="kw">continue</span>;        <span class="cm">// 언더스코어 시작 (내부용)</span>
+
+    <span class="kw">const</span> selector = <span class="str">`.</span>${<span class="type">CSS</span>.<span class="fn">escape</span>(cls)}<span class="str">`</span>;
+    <span class="kw">if</span> (<span class="fn">isUniqueSelector</span>(selector)) {
+      <span class="kw">return</span> { selector };
+    }
+  }
+  <span class="kw">return</span> <span class="kw">null</span>;
+}</code>
+      </pre>
+
+      <p>
+        React, Vue, Styled-Components 등 CSS-in-JS 라이브러리가 생성하는 해시 클래스(<code>css-1a2b3c</code>, <code>sc-bZQynM</code> 등)는
+        빌드마다 바뀌기 때문에 의미 없다. 이런 패턴을 정규식으로 걸러낸다.
+      </p>
+
+      <!-- Section 5 -->
+      <h2 id="unique-sort"><span class="section-number">05</span>유니크 셀렉터 우선 정렬이 중요한 이유</h2>
+
+      <p>
+        단순히 id &rarr; class &rarr; xpath 순서로 보여주면 될 것 같지만, 실전에서는 그렇지 않다.
+        <strong>id가 있어도 페이지에서 유니크하지 않을 수 있고</strong>,
+        class 셀렉터가 오히려 유니크할 수도 있다.
+      </p>
+
+      <pre>
+        <div class="code-header"><span class="lang">javascript</span><span>selector-engine.js - 정렬 로직</span></div>
+        <code><span class="cm">// 유니크 여부 체크 + 매치 수 측정</span>
+results.<span class="fn">forEach</span>(r <span class="op">=&gt;</span> {
+  r.unique = <span class="fn">checkUnique</span>(r);
+  r.matchCount = <span class="fn">countMatches</span>(r);
+});
+
+<span class="cm">// 정렬: 유니크 우선 &rarr; 매치 수 적은 순 &rarr; 기존 priority</span>
+<span class="kw">return</span> results.<span class="fn">sort</span>((a, b) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (a.unique <span class="op">!==</span> b.unique) <span class="kw">return</span> a.unique ? <span class="num">-1</span> : <span class="num">1</span>;
+  <span class="kw">if</span> (a.matchCount <span class="op">!==</span> b.matchCount) <span class="kw">return</span> a.matchCount <span class="op">-</span> b.matchCount;
+  <span class="kw">return</span> a.priority <span class="op">-</span> b.priority;
+});</code>
+      </pre>
+
+      <p>정렬 기준은 3단계다:</p>
+
+      <ol>
+        <li><strong>유니크 여부</strong> - 페이지에서 1개만 매칭되는 셀렉터가 최상위로 올라온다.</li>
+        <li><strong>매치 수</strong> - 유니크하지 않다면 매치 수가 적은 것이 상위.</li>
+        <li><strong>기본 우선순위</strong> - 나머지가 같다면 id > data-testid > class 순서.</li>
+      </ol>
+
+      <div class="callout success">
+        <div class="callout-title">실제 효과</div>
+        <p>
+          말풍선에서 첫 번째 셀렉터를 그냥 복사하면 된다. 그 셀렉터가
+          해당 페이지에서 <strong>가장 안정적이고 유니크한 선택지</strong>라는 것을 엔진이 보장한다.
+          유니크 셀렉터에는 초록색 <strong>UNIQUE</strong> 뱃지가 표시되고,
+          유니크하지 않은 경우에는 노란색으로 매치 수가 표시된다.
+        </p>
+      </div>
+
+      <!-- Section 6 -->
+      <h2 id="playwright"><span class="section-number">06</span>Playwright 코드 자동 생성</h2>
+
+      <p>
+        셀렉터를 뽑는 것에서 끝나지 않는다.
+        <strong>가장 좋은 셀렉터를 기반으로 Playwright Python 코드를 즉시 생성</strong>해준다.
+      </p>
+
+      <pre>
+        <div class="code-header"><span class="lang">javascript</span><span>selector-engine.js - toPlaywright()</span></div>
+        <code><span class="kw">function</span> <span class="fn">toPlaywright</span>(selectorResult) {
+  <span class="kw">const</span> { type, selector } = selectorResult;
+  <span class="kw">switch</span> (type) {
+    <span class="kw">case</span> <span class="str">'id'</span>:
+      <span class="kw">return</span> <span class="str">`page.locator("${selector}")`</span>;
+    <span class="kw">case</span> <span class="str">'data-testid'</span>:
+      <span class="kw">return</span> <span class="str">`page.get_by_test_id("${...}")`</span>;
+    <span class="kw">case</span> <span class="str">'role'</span>:
+      <span class="kw">return</span> <span class="str">`page.get_by_role("${role}", name="${name}")`</span>;
+    <span class="kw">case</span> <span class="str">'text'</span>:
+      <span class="kw">return</span> <span class="str">`page.get_by_text("${text}")`</span>;
+    <span class="kw">case</span> <span class="str">'xpath'</span>:
+      <span class="kw">return</span> <span class="str">`page.locator("xpath=${selector}")`</span>;
+    <span class="kw">default</span>:
+      <span class="kw">return</span> <span class="str">`page.locator("${selector}")`</span>;
+  }
+}</code>
+      </pre>
+
+      <p>
+        셀렉터 타입에 따라 Playwright의 시맨틱 API를 적절히 매핑한다.
+        <code>data-testid</code>이면 <code>get_by_test_id()</code>,
+        <code>role</code>이면 <code>get_by_role()</code>,
+        <code>text</code>이면 <code>get_by_text()</code>를 사용한다.
+      </p>
+
+      <p>생성되는 코드 예시:</p>
+
+      <pre>
+        <div class="code-header"><span class="lang">python</span><span>자동 생성된 Playwright 코드</span></div>
+        <code><span class="cm"># Locator</span>
+page.<span class="fn">get_by_test_id</span>(<span class="str">"submit-button"</span>)
+
+<span class="cm"># Click action</span>
+<span class="kw">await</span> page.<span class="fn">get_by_test_id</span>(<span class="str">"submit-button"</span>).<span class="fn">click</span>()
+
+<span class="cm"># Fill action</span>
+<span class="kw">await</span> page.<span class="fn">get_by_test_id</span>(<span class="str">"submit-button"</span>).<span class="fn">fill</span>(<span class="str">""</span>)
+
+<span class="cm"># Assertion</span>
+<span class="kw">await</span> <span class="fn">expect</span>(page.<span class="fn">get_by_test_id</span>(<span class="str">"submit-button"</span>)).<span class="fn">to_be_visible</span>()</code>
+      </pre>
+
+      <p>
+        말풍선과 사이드 패널 양쪽에서 각 액션 코드를 개별 복사할 수 있다.
+        QA 엔지니어가 테스트 코드를 작성할 때 복붙만 하면 되는 수준까지 자동화된다.
+      </p>
+
+      <!-- Section 7 -->
+      <h2 id="export"><span class="section-number">07</span>JSON / CSV 내보내기</h2>
+
+      <p>
+        사이드 패널에 쌓인 히스토리를 <strong>JSON</strong> 또는 <strong>CSV</strong> 형식으로 내보낼 수 있다.
+        한 페이지의 셀렉터를 쭉 뽑아놓고 한 번에 내보내면 테스트 스펙 문서로도 활용 가능하다.
+      </p>
+
+      <pre>
+        <div class="code-header"><span class="lang">javascript</span><span>sidepanel.js - JSON 내보내기</span></div>
+        <code><span class="kw">const</span> exportData = history.<span class="fn">map</span>(item <span class="op">=&gt;</span> ({
+  url:        item.url,
+  element:    item.elementInfo,
+  selectors:  item.selectors,
+  playwright: item.playwright,
+  timestamp:  item.timestamp,
+}));
+
+<span class="fn">downloadFile</span>(
+  <span class="type">JSON</span>.<span class="fn">stringify</span>(exportData, <span class="kw">null</span>, <span class="num">2</span>),
+  <span class="str">`selectors-${<span class="fn">formatDate</span>(<span class="kw">new</span> <span class="type">Date</span>())}.json`</span>,
+  <span class="str">'application/json'</span>
+);</code>
+      </pre>
+
+      <p>CSV 형식은 스프레드시트에서 바로 열 수 있도록 헤더를 포함한다:</p>
+
+      <pre>
+        <div class="code-header"><span class="lang">csv</span><span>selectors-20260402_1230.csv</span></div>
+        <code>Timestamp,URL,Tag,Best Selector Type,Best Selector,Playwright Locator
+2026-04-02T12:30:00,https://example.com,button,data-testid,"[data-testid=""submit""]","page.get_by_test_id(""submit"")"
+2026-04-02T12:30:05,https://example.com,input,id,"#email","page.locator(""#email"")"</code>
+      </pre>
+
+      <p>
+        히스토리는 <code>chrome.storage.local</code>에 최대 200개까지 저장된다.
+        검색 기능도 있어서 셀렉터 값, 태그 이름, 텍스트 내용으로 필터링할 수 있다.
+      </p>
+
+      <!-- Section 8 -->
+      <h2 id="lessons"><span class="section-number">08</span>개발 과정에서 배운 점</h2>
+
+      <h3>Manifest V3의 메시지 통신</h3>
+      <p>
+        Content Script와 Side Panel은 직접 통신할 수 없다.
+        반드시 Background Service Worker가 중간에서 메시지를 릴레이해야 한다.
+        처음에는 이 구조를 몰라서 <code>chrome.runtime.sendMessage</code>로 직접 보냈다가
+        메시지가 사라지는 현상을 겪었다.
+      </p>
+
+      <pre>
+        <div class="code-header"><span class="lang">javascript</span><span>background.js - 메시지 브릿지</span></div>
+        <code><span class="cm">// Content Script에서 온 셀렉터 결과를 Side Panel로 전달</span>
+chrome.runtime.onMessage.<span class="fn">addListener</span>((msg, sender, sendResponse) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (msg.type <span class="op">===</span> <span class="str">'selectorExtracted'</span>) {
+    chrome.runtime.<span class="fn">sendMessage</span>({
+      type: <span class="str">'newSelector'</span>,
+      data: msg.data,
+    }).<span class="fn">catch</span>(() <span class="op">=&gt;</span> {
+      <span class="cm">// 사이드 패널이 닫혀있으면 무시</span>
+    });
+  }
+  <span class="kw">return</span> <span class="kw">true</span>; <span class="cm">// async sendResponse 유지</span>
+});</code>
+      </pre>
+
+      <h3>자기 자신을 선택하는 문제</h3>
+      <p>
+        Content Script가 만든 말풍선 DOM이 사용자의 클릭 이벤트를 가로채는 문제가 있었다.
+        <code>se-</code> 접두사로 확장 프로그램의 모든 클래스를 네이밍하고,
+        <code>isOwnElement()</code> 함수로 자체 UI 요소를 클릭 대상에서 제외시켰다.
+        또한 셀렉터 추출 시 <code>se-highlight</code> 클래스가 포함되지 않도록
+        추출 직전에 해당 클래스를 제거하는 순서도 중요했다.
+      </p>
+
+      <h3>Windows 환경에서의 PIL 아이콘 생성</h3>
+      <p>
+        아이콘을 Pillow(PIL)로 프로그래밍 방식으로 생성했다.
+        4배 크기 캔버스에 그린 뒤 <code>Image.LANCZOS</code>로 다운스케일하여 안티앨리어싱을 확보하는 방식이다.
+        크로스헤어 + 그리드 + 초록 포커스 포인트로 "Precision Signal" 디자인 컨셉을 잡았다.
+      </p>
+
+      <pre>
+        <div class="code-header"><span class="lang">python</span><span>generate_icons.py</span></div>
+        <code><span class="kw">def</span> <span class="fn">create_icon</span>(size):
+    scale = <span class="num">4</span>
+    s = size * scale + <span class="num">1</span>  <span class="cm"># 홀수로 만들어 정확한 중앙 픽셀 확보</span>
+    img = Image.<span class="fn">new</span>(<span class="str">'RGBA'</span>, (s, s), (<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>))
+    draw = ImageDraw.<span class="fn">Draw</span>(img)
+
+    <span class="cm"># ... 크로스헤어, 링, 코너 브래킷 등 그리기 ...</span>
+
+    <span class="cm"># 고품질 안티앨리어싱으로 다운스케일</span>
+    img = img.<span class="fn">resize</span>((size, size), Image.LANCZOS)
+    <span class="kw">return</span> img</code>
+      </pre>
+
+      <h3>동적 클래스 필터링의 중요성</h3>
+      <p>
+        실제 웹 앱에서 테스트해보니 CSS-in-JS 라이브러리가 생성하는 클래스가 셀렉터를 심각하게 오염시켰다.
+        <code>css-1a2b3c</code>, <code>sc-bZQynM</code>, <code>_1f3ab</code> 같은 패턴은
+        빌드할 때마다 바뀌어서 테스트 셀렉터로 쓸 수 없다.
+        정규식 패턴 매칭으로 이런 클래스를 걸러내는 것이 예상보다 큰 효과를 가져왔다.
+      </p>
+
+      <div class="callout success">
+        <div class="callout-title">결론</div>
+        <p>
+          QA 자동화에서 셀렉터 추출은 단순 반복 작업이지만, 매일 수십~수백 번 반복되면 상당한 시간 비용이 된다.
+          도구 하나로 이 과정을 클릭 한 번 + 복사 한 번으로 압축할 수 있다면 그 자체로 가치가 있다.
+          Manifest V3, Content Script 통신 구조, 셀렉터 우선순위 알고리즘 등
+          크롬 확장 프로그램 개발에 관심이 있다면 직접 만들어보는 것을 추천한다.
+        </p>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="tech-stack">
+        <span class="tech-tag">Manifest V3</span>
+        <span class="tech-tag">Content Script</span>
+        <span class="tech-tag">Service Worker</span>
+        <span class="tech-tag">Side Panel API</span>
+        <span class="tech-tag">Playwright</span>
+        <span class="tech-tag">Pillow (PIL)</span>
+      </div>
+      <p>Selector Extractor v1.1.0 &mdash; QA 자동화용 웹 엘리먼트 셀렉터 추출 도구</p>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 280px;
+    background: #1E2126;
+    color: #F2F4F6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 20px;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .logo {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #0064FF, #00C851);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .subtitle {
+    font-size: 11px;
+    color: #6B7076;
+  }
+  .toggle-area {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #26282B;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .toggle-label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+  }
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle-slider {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #333638;
+    border-radius: 12px;
+    transition: 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #ACB2B9;
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+  .toggle input:checked + .toggle-slider {
+    background: #0064FF;
+  }
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background: #fff;
+  }
+  .status {
+    text-align: center;
+    font-size: 12px;
+    color: #6B7076;
+    padding: 8px;
+  }
+  .status.active {
+    color: #00C851;
+  }
+  .shortcut {
+    text-align: center;
+    font-size: 11px;
+    color: #6B7076;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #2D3037;
+  }
+  kbd {
+    background: #333638;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">SE</div>
+    <div>
+      <div class="title">Selector Extractor</div>
+      <div class="subtitle">QA Automation Helper</div>
+    </div>
+  </div>
+
+  <div class="toggle-area">
+    <span class="toggle-label">Extractor</span>
+    <label class="toggle">
+      <input type="checkbox" id="toggleSwitch">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div id="status" class="status">OFF - 비활성</div>
+
+  <div class="shortcut">
+    페이지에서 엘리먼트를 클릭하면<br>셀렉터가 추출됩니다
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

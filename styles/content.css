@@ -1,0 +1,187 @@
+/* Selector Extractor - Content Script Styles */
+
+/* 하이라이트 오버레이 */
+.se-highlight {
+  outline: 2px solid #0064FF !important;
+  outline-offset: 2px !important;
+  background-color: rgba(0, 100, 255, 0.08) !important;
+  transition: outline 0.1s, background-color 0.1s !important;
+}
+
+.se-highlight-clicked {
+  outline: 2px solid #00C851 !important;
+  outline-offset: 2px !important;
+  background-color: rgba(0, 200, 81, 0.08) !important;
+}
+
+/* 말풍선 */
+.se-tooltip {
+  position: fixed;
+  z-index: 2147483647;
+  background: #1E2126;
+  border: 1px solid #2D3037;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #F2F4F6;
+  min-width: 320px;
+  max-width: 500px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 0;
+  animation: se-fade-in 0.15s ease;
+}
+
+@keyframes se-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.se-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2D3037;
+  font-size: 11px;
+  color: #6B7076;
+}
+
+.se-tooltip-header .se-tag {
+  background: rgba(0, 100, 255, 0.15);
+  color: #0064FF;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.se-tooltip-close {
+  background: none;
+  border: none;
+  color: #6B7076;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.se-tooltip-close:hover {
+  color: #F2F4F6;
+}
+
+/* 셀렉터 아이템 */
+.se-selector-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(45, 48, 55, 0.5);
+  transition: background 0.1s;
+}
+
+.se-selector-item:last-child {
+  border-bottom: none;
+}
+
+.se-selector-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.se-selector-item .se-type {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #ACB2B9;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.se-selector-item .se-value {
+  flex: 1;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  color: #E5E8EB;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.se-selector-item .se-copy-btn {
+  background: rgba(0, 100, 255, 0.12);
+  border: none;
+  color: #0064FF;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background 0.15s;
+}
+
+.se-selector-item .se-copy-btn:hover {
+  background: rgba(0, 100, 255, 0.25);
+}
+
+.se-selector-item .se-copy-btn.se-copied {
+  background: rgba(0, 200, 81, 0.15);
+  color: #00C851;
+}
+
+/* 유니크 뱃지 */
+.se-unique {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: rgba(0, 200, 81, 0.15);
+  color: #00C851;
+  letter-spacing: 0.3px;
+}
+
+.se-match-count {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: rgba(255, 184, 0, 0.12);
+  color: #FFB800;
+}
+
+/* Playwright 섹션 */
+.se-playwright-section {
+  border-top: 1px solid #2D3037;
+  padding: 10px 14px;
+}
+
+.se-playwright-section .se-section-title {
+  font-size: 11px;
+  color: #6B7076;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.se-playwright-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.se-playwright-code .se-value {
+  flex: 1;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  color: #7CB3FF;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* 비활성 오버레이 (확장 OFF 시) */
+.se-disabled-overlay {
+  display: none;
+}

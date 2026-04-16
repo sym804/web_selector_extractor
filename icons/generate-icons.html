@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Generator</title></head>
+<body>
+<p>아이콘을 생성하고 다운로드합니다.</p>
+<script>
+[16, 48, 128].forEach(size => {
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+
+  // 둥근 사각형
+  const r = size / 5;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, r);
+  ctx.fillStyle = '#0064FF';
+  ctx.fill();
+
+  // 텍스트
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${size * 0.35}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SE', size / 2, size / 2);
+
+  // 다운로드
+  const a = document.createElement('a');
+  a.download = `icon${size}.png`;
+  a.href = c.toDataURL('image/png');
+  a.textContent = `Download icon${size}.png`;
+  a.style.display = 'block';
+  a.style.margin = '10px';
+  document.body.appendChild(a);
+
+  // 미리보기
+  c.style.margin = '10px';
+  c.style.border = '1px solid #ccc';
+  document.body.appendChild(c);
+});
+</script>
+</body>
+</html>
