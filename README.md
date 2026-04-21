@@ -84,3 +84,7 @@ page.get_by_text("로그인")
 ## 라이선스
 
 MIT License
+
+## Author
+
+[sym804](https://github.com/sym804)
