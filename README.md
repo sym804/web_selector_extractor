@@ -83,7 +83,7 @@ page.get_by_text("로그인")
 
 ## 라이선스
 
-AGPL-3.0 (GNU Affero General Public License v3.0). 전문은 LICENSE 파일 참고.
+MIT License
 
 ## Author
 
