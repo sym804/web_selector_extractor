@@ -1,7 +1,7 @@
 # Selector Extractor 릴리즈 노트
 
 ## 버전 현황
-- Frontend: 1.2.0 (manifest 와 동일한 3자리 표기로 통일)
+- Frontend: 1.3.0 (manifest 와 동일한 3자리 표기로 통일)
 
 =========== 2026/04/02 릴리즈 노트 ===========
 
@@ -41,3 +41,16 @@
 - [버그 수정] role / text 셀렉터 값의 큰따옴표 escape 누락
 - [개선] 셀렉터 엔진 단위 테스트 13개 신설 (node --test + jsdom, `npm test`)
   Frontend: 1.1.0.2 -> 1.2.0
+
+### v1.3.0
+기능 추가
+- [기능 추가] Shadow DOM(open) 내부 요소 선택 지원
+  - 이벤트가 shadow host 로 리타깃되는 문제를 `composedPath()[0]` 로 해결
+  - 유일성/매치 수를 document 가 아니라 해당 ShadowRoot 기준으로 계산
+    (바깥에 같은 id 가 있어도 shadow 안에서 유일하면 UNIQUE)
+  - host 체인을 계산해 Playwright 코드를 `page.locator("my-app").locator(...)` 로 연결. 중첩 shadow 지원
+  - 확장 CSS 가 shadow 경계를 넘지 못하는 문제 -> 해당 shadow root 에 하이라이트 스타일 1회 주입
+  - shadow 내부에서는 XPath 미제공(경계를 넘지 못해 무효 셀렉터가 됨)
+- [기능 추가] 말풍선 헤더에 shadow 뱃지 표시
+- [개선] 단위 테스트 13 -> 20개. 실제 Chrome 에 확장을 로드한 E2E 로 iframe/shadow 동작 검증
+  Frontend: 1.2.0 -> 1.3.0

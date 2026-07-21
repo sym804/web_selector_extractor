@@ -5,6 +5,28 @@
   let isActive = false;
   let currentHighlight = null;
   let currentTooltip = null;
+  const styledShadowRoots = new WeakSet();
+
+  // shadow DOM 안 요소는 이벤트 target 이 host 로 리타깃된다.
+  // composedPath()[0] 이 실제로 클릭/호버된 요소다.
+  function realTarget(e) {
+    const path = typeof e.composedPath === 'function' ? e.composedPath() : null;
+    return (path && path.length) ? path[0] : e.target;
+  }
+
+  // 확장 CSS 는 shadow 경계를 넘지 못하므로, 해당 ShadowRoot 에 하이라이트 스타일을 한 번만 주입
+  function ensureShadowStyles(el) {
+    const rn = el.getRootNode ? el.getRootNode() : null;
+    if (!rn || !rn.host || styledShadowRoots.has(rn)) return;
+    const style = document.createElement('style');
+    style.textContent =
+      '.se-highlight{outline:2px solid #0064FF !important;outline-offset:2px !important;' +
+      'background-color:rgba(0,100,255,.08) !important;}' +
+      '.se-highlight-clicked{outline:2px solid #00C851 !important;outline-offset:2px !important;' +
+      'background-color:rgba(0,200,81,.08) !important;}';
+    rn.appendChild(style);
+    styledShadowRoots.add(rn);
+  }
 
   // background에서 ON/OFF 메시지 수신
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -23,44 +45,54 @@
   // 마우스 오버 - 하이라이트
   document.addEventListener('mouseover', (e) => {
     if (!isActive) return;
-    if (isOwnElement(e.target)) return;
+    const target = realTarget(e);
+    if (!target || target.nodeType !== 1) return;
+    if (isOwnElement(target)) return;
 
-    if (currentHighlight && currentHighlight !== e.target) {
+    if (currentHighlight && currentHighlight !== target) {
       currentHighlight.classList.remove('se-highlight');
     }
-    e.target.classList.add('se-highlight');
-    currentHighlight = e.target;
+    ensureShadowStyles(target);
+    target.classList.add('se-highlight');
+    currentHighlight = target;
   }, true);
 
   // 마우스 아웃 - 하이라이트 제거
   document.addEventListener('mouseout', (e) => {
     if (!isActive) return;
-    if (isOwnElement(e.target)) return;
-    e.target.classList.remove('se-highlight');
+    const target = realTarget(e);
+    if (!target || target.nodeType !== 1) return;
+    if (isOwnElement(target)) return;
+    target.classList.remove('se-highlight');
   }, true);
 
   // 클릭 - 셀렉터 추출
   document.addEventListener('click', (e) => {
     if (!isActive) return;
-    if (isOwnElement(e.target)) return;
+    const target = realTarget(e);
+    if (!target || target.nodeType !== 1) return;
+    if (isOwnElement(target)) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const el = e.target;
+    const el = target;
 
-    // iframe 안이면 부모 기준 프레임 셀렉터까지 확보 (frame_locator 생성용)
+    // iframe / shadow DOM 컨텍스트 (frame_locator + host 체인 생성용)
     const frame = SelectorEngine.getFrameContext();
+    const shadow = SelectorEngine.getShadowContext(el);
+    const ctx = { ...frame, ...shadow };
 
     // 셀렉터 추출 (하이라이트 클래스 추가 전에 실행)
     el.classList.remove('se-highlight');
     const selectors = SelectorEngine.extract(el);
 
+    ensureShadowStyles(el);
     el.classList.add('se-highlight-clicked');
     const elementInfo = SelectorEngine.getElementInfo(el);
 
     // 말풍선 표시
-    showTooltip(el, selectors, elementInfo, frame);
+    showTooltip(el, selectors, elementInfo, ctx);
 
     // 사이드 패널에 전송
     chrome.runtime.sendMessage({
@@ -69,11 +101,12 @@
         selectors,
         elementInfo,
         frame,
+        shadow,
         playwright: selectors.length > 0 ? {
-          locator: SelectorEngine.toPlaywright(selectors[0], frame),
-          click: SelectorEngine.toPlaywrightAction(selectors[0], 'click', frame),
-          fill: SelectorEngine.toPlaywrightAction(selectors[0], 'fill', frame),
-          visible: SelectorEngine.toPlaywrightAction(selectors[0], 'visible', frame),
+          locator: SelectorEngine.toPlaywright(selectors[0], ctx),
+          click: SelectorEngine.toPlaywrightAction(selectors[0], 'click', ctx),
+          fill: SelectorEngine.toPlaywrightAction(selectors[0], 'fill', ctx),
+          visible: SelectorEngine.toPlaywrightAction(selectors[0], 'visible', ctx),
         } : null,
         url: window.location.href,
         timestamp: new Date().toISOString(),
@@ -93,7 +126,7 @@
     }
   });
 
-  function showTooltip(el, selectors, elementInfo, frame) {
+  function showTooltip(el, selectors, elementInfo, ctx) {
     removeTooltip();
 
     const tooltip = document.createElement('div');
@@ -104,7 +137,8 @@
     header.className = 'se-tooltip-header';
     header.innerHTML = `
       <span class="se-tag">&lt;${elementInfo.tag}&gt;</span>
-      ${frame && frame.inFrame ? '<span class="se-unique" title="iframe 내부 요소">iframe</span>' : ''}
+      ${ctx && ctx.inFrame ? '<span class="se-unique" title="iframe 내부 요소">iframe</span>' : ''}
+      ${ctx && ctx.inShadow ? '<span class="se-unique" title="Shadow DOM 내부 요소">shadow</span>' : ''}
       <span>${selectors.length} selectors</span>
       <button class="se-tooltip-close">&times;</button>
     `;
@@ -150,10 +184,10 @@
       pwSection.className = 'se-playwright-section';
 
       const actions = [
-        { label: 'Locator', code: SelectorEngine.toPlaywright(bestSelector, frame) },
-        { label: 'Click', code: SelectorEngine.toPlaywrightAction(bestSelector, 'click', frame) },
-        { label: 'Fill', code: SelectorEngine.toPlaywrightAction(bestSelector, 'fill', frame) },
-        { label: 'Assert', code: SelectorEngine.toPlaywrightAction(bestSelector, 'visible', frame) },
+        { label: 'Locator', code: SelectorEngine.toPlaywright(bestSelector, ctx) },
+        { label: 'Click', code: SelectorEngine.toPlaywrightAction(bestSelector, 'click', ctx) },
+        { label: 'Fill', code: SelectorEngine.toPlaywrightAction(bestSelector, 'fill', ctx) },
+        { label: 'Assert', code: SelectorEngine.toPlaywrightAction(bestSelector, 'visible', ctx) },
       ];
 
       pwSection.innerHTML = `<div class="se-section-title">Playwright (Best Selector)</div>`;

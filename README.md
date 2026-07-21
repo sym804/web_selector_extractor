@@ -8,6 +8,7 @@ QA 자동화용 웹 엘리먼트 셀렉터 추출 크롬 확장 프로그램
 - **유니크 셀렉터 우선 정렬**: 페이지에서 1개만 매치되는 셀렉터를 최상위로 추천
 - **Playwright 코드 자동 생성**: locator(), get_by_role(), get_by_test_id(), get_by_text() + 6가지 액션
 - **iframe 내부 요소 지원**: 프레임 안 요소도 선택 가능. Playwright 코드는 `page.frame_locator("...")` 로 자동 래핑
+- **Shadow DOM 내부 요소 지원**: 열린 shadow root 안 요소도 선택 가능. host 체인을 따라 `locator()` 로 자동 연결
 - **실시간 말풍선 UI**: 호버 시 블루 아웃라인, 클릭 시 그린 강조, UNIQUE/매치 수 뱃지
 - **사이드 패널 히스토리**: 추출한 셀렉터 누적 저장, 실시간 검색, 페이지별 통계
 - **데이터 내보내기**: JSON/CSV 형식, 날짜별 파일명 자동 생성
@@ -90,6 +91,7 @@ npm test
 - 속성 값의 큰따옴표 escape
 - `css-*` 등 동적 해시 클래스 제외
 - iframe 컨텍스트 감지(최상위/same-origin/cross-origin 폴백)와 `frame_locator` 래핑
+- Shadow DOM host 체인 계산(중첩 포함), ShadowRoot 기준 유일성 판정, shadow 내부 XPath 미제공, iframe+shadow 조합
 
 ## iframe 지원
 
@@ -102,9 +104,25 @@ page.frame_locator("#pay").get_by_test_id("submit").click()
 
 프레임 셀렉터는 `id` → `name` → `src` → `nth-of-type` 순으로 결정합니다.
 
+## Shadow DOM 지원
+
+열린(open) shadow root 안의 요소도 그대로 클릭해 추출할 수 있습니다. 세 가지를 처리합니다.
+
+- 이벤트가 shadow host 로 리타깃되는 문제는 `composedPath()[0]` 으로 실제 타깃을 잡습니다.
+- 유일성/매치 수는 `document` 가 아니라 **그 ShadowRoot 기준**으로 셉니다. (바깥에 같은 id 가 있어도 shadow 안에서 유일하면 UNIQUE)
+- 확장 CSS 는 shadow 경계를 넘지 못하므로, 해당 shadow root 에 하이라이트 스타일을 한 번만 주입합니다.
+
+```python
+# shadow root 안 요소를 클릭한 경우 자동 생성되는 형태
+page.locator("my-app").locator("#payBtn").click()
+```
+
+Playwright 는 `locator()` 단계마다 열린 shadow root 를 통과하므로, host 를 차례로 내려가면 내부 요소에 도달합니다. 중첩 shadow 도 host 체인이 순서대로 쌓입니다.
+
 ## 한계 (Limitations)
 
-- open Shadow DOM 내부 요소는 shadow host 로 리타깃되어 정밀 선택이 어려울 수 있습니다.
+- **닫힌(closed) shadow root** 는 브라우저가 외부 접근을 막으므로 지원할 수 없습니다.
+- shadow 내부 요소에는 **XPath 를 제공하지 않습니다**. XPath 는 shadow 경계를 넘지 못해 무효 셀렉터가 되기 때문입니다.
 - iframe 안에서는 말풍선이 그 프레임 영역 안에 그려집니다. 프레임이 작으면 잘려 보일 수 있으니 사이드 패널에서 확인하세요(기록은 정상).
 - cross-origin iframe 은 부모 문서의 iframe 엘리먼트에 접근할 수 없어, 현재 URL 기준 `iframe[src="..."]` 로 대체합니다. 부모의 실제 `src` 속성과 다르면(리다이렉트/상대경로) 수동 보정이 필요합니다.
 

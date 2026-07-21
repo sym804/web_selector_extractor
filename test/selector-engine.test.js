@@ -176,6 +176,76 @@ test('프레임 컨텍스트가 있으면 Playwright 코드가 frame_locator 로
   );
 });
 
+// ---- Shadow DOM 지원 ----
+
+// host 에 open shadow root 를 붙이고 내부 HTML 을 넣는다
+function attachShadow(host, html) {
+  const sr = host.attachShadow({ mode: 'open' });
+  sr.innerHTML = html;
+  return sr;
+}
+
+test('일반 요소는 inShadow=false', () => {
+  const doc = setup('<button id="go">x</button>');
+  const sc = SelectorEngine.getShadowContext(doc.querySelector('button'));
+  assert.strictEqual(sc.inShadow, false);
+  assert.deepStrictEqual(sc.hostPath, []);
+});
+
+test('shadow 내부 요소는 host 체인을 만든다', () => {
+  const doc = setup('<my-app></my-app>');
+  const sr = attachShadow(doc.querySelector('my-app'), '<button id="go">x</button>');
+  const sc = SelectorEngine.getShadowContext(sr.querySelector('button'));
+  assert.strictEqual(sc.inShadow, true);
+  assert.deepStrictEqual(sc.hostPath, ['my-app']);
+});
+
+test('중첩 shadow 는 host 체인이 바깥->안 순서로 쌓인다', () => {
+  const doc = setup('<my-app></my-app>');
+  const outer = attachShadow(doc.querySelector('my-app'), '<my-button></my-button>');
+  const inner = attachShadow(outer.querySelector('my-button'), '<button id="go">x</button>');
+  const sc = SelectorEngine.getShadowContext(inner.querySelector('button'));
+  assert.deepStrictEqual(sc.hostPath, ['my-app', 'my-button']);
+});
+
+test('유일성 검사가 document 가 아니라 ShadowRoot 기준으로 계산된다', () => {
+  // 같은 id 가 메인 문서에도 있지만, shadow 안에서는 그 안에서만 세야 한다
+  const doc = setup('<div id="go">바깥</div><my-app></my-app>');
+  const sr = attachShadow(doc.querySelector('my-app'), '<button id="go">x</button>');
+  const results = SelectorEngine.extract(sr.querySelector('button'));
+  const byId = results.find(r => r.type === 'id');
+  assert.strictEqual(byId.selector, '#go');
+  assert.strictEqual(byId.unique, true, 'ShadowRoot 안에서는 유일해야 한다');
+  assert.strictEqual(byId.matchCount, 1);
+});
+
+test('shadow 내부에서는 XPath 를 제공하지 않는다 (경계를 못 넘음)', () => {
+  const doc = setup('<my-app></my-app>');
+  const sr = attachShadow(doc.querySelector('my-app'), '<button id="go">x</button>');
+  const results = SelectorEngine.extract(sr.querySelector('button'));
+  assert.strictEqual(results.find(r => r.type === 'xpath'), undefined);
+});
+
+test('hostPath 가 있으면 Playwright 코드가 host 를 거쳐 내려간다', () => {
+  const doc = setup('<my-app></my-app>');
+  const sr = attachShadow(doc.querySelector('my-app'), '<button data-testid="submit">x</button>');
+  const best = SelectorEngine.extract(sr.querySelector('button')).find(r => r.type === 'data-testid');
+  const ctx = SelectorEngine.getShadowContext(sr.querySelector('button'));
+  assert.strictEqual(
+    SelectorEngine.toPlaywright(best, ctx),
+    'page.locator("my-app").get_by_test_id("submit")'
+  );
+});
+
+test('iframe + shadow 가 겹치면 frame_locator 뒤에 host 체인이 붙는다', () => {
+  const best = { type: 'id', selector: '#go' };
+  const ctx = { inFrame: true, frameSelector: '#pay', inShadow: true, hostPath: ['my-app', 'my-button'] };
+  assert.strictEqual(
+    SelectorEngine.toPlaywright(best, ctx),
+    'page.frame_locator("#pay").locator("my-app").locator("my-button").locator("#go")'
+  );
+});
+
 test('프레임이 없으면 기존과 동일하게 page 루트를 쓴다 (회귀)', () => {
   const doc = setup('<button data-testid="pay">x</button>');
   const best = SelectorEngine.extract(doc.querySelector('button')).find(r => r.type === 'data-testid');
