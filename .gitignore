@@ -1,0 +1,12 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# 블로그 초안 (docs 로 옮기기 전 임시)
+blog1.html
+blog2.html
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,13 @@
+{
+  "name": "selector-extractor",
+  "version": "1.1.0",
+  "description": "QA 자동화용 셀렉터 추출 크롬 확장 - 셀렉터 엔진 단위 테스트",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

@@ -64,7 +64,7 @@ page.get_by_text("로그인")
 | 순위 | 타입 | 설명 |
 |------|------|------|
 | 1 | ID | `#element-id` |
-| 2 | data-testid | `[data-testid="value"]`, data-test-id, data-cy |
+| 2 | test id | `data-testid` / `data-test-id` / `data-cy` 를 각각 매치된 속성 그대로 (예: `[data-cy="value"]`) |
 | 3 | 유니크 클래스 | 페이지에서 1개만 매치되는 클래스 |
 | 4 | CSS Selector | 조합된 CSS 셀렉터 |
 | 5 | XPath | 최대 6단계 깊이 |
@@ -73,13 +73,33 @@ page.get_by_text("로그인")
 
 추출된 셀렉터는 유니크 여부 > 매치 수 > 기본 우선순위 순으로 자동 정렬됩니다.
 
+## 테스트
+
+셀렉터 추출 엔진의 정확성은 단위 테스트로 검증합니다 (Node 내장 test runner + jsdom, 외부 프레임워크 없음).
+
+```bash
+npm install
+npm test
+```
+
+`test/selector-engine.test.js` 가 검증하는 것:
+- `data-testid` / `data-test-id` / `data-cy` 가 각각 **매치된 속성 그대로** 셀렉터를 내는지 (data-cy 를 data-testid 로 오매핑하지 않는지)
+- test id 우선순위 (`data-testid` > `data-cy`)
+- 특수문자 id 의 `CSS.escape` 처리 (실제 DOM 매치까지 확인)
+- 속성 값의 큰따옴표 escape
+- `css-*` 등 동적 해시 클래스 제외
+
+## 한계 (Limitations)
+
+- iframe 내부 요소는 아직 선택할 수 없습니다 (content script 가 최상위 프레임에만 주입됨).
+- open Shadow DOM 내부 요소는 shadow host 로 리타깃되어 정밀 선택이 어려울 수 있습니다.
+
 ## 기술 스택
 
 - Vanilla JavaScript (ES6+)
 - Chrome Extension Manifest V3
-- Side Panel API
-- Storage API
-- Runtime Messaging
+- Side Panel API / Storage API / Runtime Messaging
+- 테스트: Node `node --test` + jsdom
 
 ## 라이선스
 
