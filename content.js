@@ -49,6 +49,9 @@
 
     const el = e.target;
 
+    // iframe 안이면 부모 기준 프레임 셀렉터까지 확보 (frame_locator 생성용)
+    const frame = SelectorEngine.getFrameContext();
+
     // 셀렉터 추출 (하이라이트 클래스 추가 전에 실행)
     el.classList.remove('se-highlight');
     const selectors = SelectorEngine.extract(el);
@@ -57,7 +60,7 @@
     const elementInfo = SelectorEngine.getElementInfo(el);
 
     // 말풍선 표시
-    showTooltip(el, selectors, elementInfo);
+    showTooltip(el, selectors, elementInfo, frame);
 
     // 사이드 패널에 전송
     chrome.runtime.sendMessage({
@@ -65,11 +68,12 @@
       data: {
         selectors,
         elementInfo,
+        frame,
         playwright: selectors.length > 0 ? {
-          locator: SelectorEngine.toPlaywright(selectors[0]),
-          click: SelectorEngine.toPlaywrightAction(selectors[0], 'click'),
-          fill: SelectorEngine.toPlaywrightAction(selectors[0], 'fill'),
-          visible: SelectorEngine.toPlaywrightAction(selectors[0], 'visible'),
+          locator: SelectorEngine.toPlaywright(selectors[0], frame),
+          click: SelectorEngine.toPlaywrightAction(selectors[0], 'click', frame),
+          fill: SelectorEngine.toPlaywrightAction(selectors[0], 'fill', frame),
+          visible: SelectorEngine.toPlaywrightAction(selectors[0], 'visible', frame),
         } : null,
         url: window.location.href,
         timestamp: new Date().toISOString(),
@@ -89,7 +93,7 @@
     }
   });
 
-  function showTooltip(el, selectors, elementInfo) {
+  function showTooltip(el, selectors, elementInfo, frame) {
     removeTooltip();
 
     const tooltip = document.createElement('div');
@@ -100,6 +104,7 @@
     header.className = 'se-tooltip-header';
     header.innerHTML = `
       <span class="se-tag">&lt;${elementInfo.tag}&gt;</span>
+      ${frame && frame.inFrame ? '<span class="se-unique" title="iframe 내부 요소">iframe</span>' : ''}
       <span>${selectors.length} selectors</span>
       <button class="se-tooltip-close">&times;</button>
     `;
@@ -145,10 +150,10 @@
       pwSection.className = 'se-playwright-section';
 
       const actions = [
-        { label: 'Locator', code: SelectorEngine.toPlaywright(bestSelector) },
-        { label: 'Click', code: SelectorEngine.toPlaywrightAction(bestSelector, 'click') },
-        { label: 'Fill', code: SelectorEngine.toPlaywrightAction(bestSelector, 'fill') },
-        { label: 'Assert', code: SelectorEngine.toPlaywrightAction(bestSelector, 'visible') },
+        { label: 'Locator', code: SelectorEngine.toPlaywright(bestSelector, frame) },
+        { label: 'Click', code: SelectorEngine.toPlaywrightAction(bestSelector, 'click', frame) },
+        { label: 'Fill', code: SelectorEngine.toPlaywrightAction(bestSelector, 'fill', frame) },
+        { label: 'Assert', code: SelectorEngine.toPlaywrightAction(bestSelector, 'visible', frame) },
       ];
 
       pwSection.innerHTML = `<div class="se-section-title">Playwright (Best Selector)</div>`;

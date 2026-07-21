@@ -54,6 +54,21 @@ function typesOf(el) {
   return SelectorEngine.extract(el).reduce((m, r) => { m[r.type] = r.selector; return m; }, {});
 }
 
+// iframe 내부 실행을 흉내낸다 (same-origin: frameElement 접근 가능)
+function enterFrame(frameEl, href) {
+  global.window = { top: {}, self: {}, frameElement: frameEl };
+  global.location = { href };
+}
+
+// cross-origin iframe: frameElement 접근이 막힌 상황
+function enterFrameCrossOrigin(href) {
+  global.window = {
+    top: {}, self: {},
+    get frameElement() { throw new Error('cross-origin'); },
+  };
+  global.location = { href };
+}
+
 test('data-cy 요소는 [data-cy=...] 셀렉터를 낸다 (회귀: 예전엔 [data-testid=...] 오출력)', () => {
   const doc = setup('<button data-cy="login-btn">Login</button>');
   const el = doc.querySelector('button');
@@ -109,4 +124,61 @@ test('data-cy 값의 큰따옴표는 escape 된다', () => {
   const t = typesOf(el);
   assert.strictEqual(t['data-cy'], '[data-cy="a\\"b"]');
   assert.strictEqual(doc.querySelectorAll(t['data-cy']).length, 1);
+});
+
+// ---- iframe 지원 ----
+
+test('최상위 프레임에서는 inFrame=false', () => {
+  setup('<div>x</div>');
+  const fc = SelectorEngine.getFrameContext();
+  assert.strictEqual(fc.inFrame, false);
+  assert.strictEqual(fc.frameSelector, null);
+});
+
+test('iframe 안에서는 부모 기준 프레임 셀렉터를 만든다 (id 우선)', () => {
+  const doc = setup('<div><iframe id="pay" name="payframe" src="/pay"></iframe></div>');
+  enterFrame(doc.querySelector('iframe'), 'https://shop.example/pay');
+  const fc = SelectorEngine.getFrameContext();
+  assert.strictEqual(fc.inFrame, true);
+  assert.strictEqual(fc.frameSelector, '#pay');
+  assert.strictEqual(fc.frameUrl, 'https://shop.example/pay');
+});
+
+test('id 가 없으면 name -> src 순으로 프레임 셀렉터', () => {
+  const doc1 = setup('<div><iframe name="payframe" src="/pay"></iframe></div>');
+  enterFrame(doc1.querySelector('iframe'), 'https://shop.example/pay');
+  assert.strictEqual(SelectorEngine.getFrameContext().frameSelector, 'iframe[name="payframe"]');
+
+  const doc2 = setup('<div><iframe src="/checkout"></iframe></div>');
+  enterFrame(doc2.querySelector('iframe'), 'https://shop.example/checkout');
+  assert.strictEqual(SelectorEngine.getFrameContext().frameSelector, 'iframe[src="/checkout"]');
+});
+
+test('cross-origin(frameElement 접근 불가)이면 현재 URL 로 src 폴백', () => {
+  setup('<div>x</div>');
+  enterFrameCrossOrigin('https://pg.example/checkout');
+  const fc = SelectorEngine.getFrameContext();
+  assert.strictEqual(fc.inFrame, true);
+  assert.strictEqual(fc.frameSelector, 'iframe[src="https://pg.example/checkout"]');
+});
+
+test('프레임 컨텍스트가 있으면 Playwright 코드가 frame_locator 로 감싸진다', () => {
+  const doc = setup('<button data-testid="pay">x</button>');
+  const best = SelectorEngine.extract(doc.querySelector('button')).find(r => r.type === 'data-testid');
+  const frame = { inFrame: true, frameSelector: '#pay', frameUrl: 'https://x/pay' };
+  assert.strictEqual(
+    SelectorEngine.toPlaywright(best, frame),
+    'page.frame_locator("#pay").get_by_test_id("pay")'
+  );
+  assert.strictEqual(
+    SelectorEngine.toPlaywrightAction(best, 'click', frame),
+    'await page.frame_locator("#pay").get_by_test_id("pay").click()'
+  );
+});
+
+test('프레임이 없으면 기존과 동일하게 page 루트를 쓴다 (회귀)', () => {
+  const doc = setup('<button data-testid="pay">x</button>');
+  const best = SelectorEngine.extract(doc.querySelector('button')).find(r => r.type === 'data-testid');
+  assert.strictEqual(SelectorEngine.toPlaywright(best), 'page.get_by_test_id("pay")');
+  assert.strictEqual(SelectorEngine.toPlaywrightAction(best, 'click'), 'await page.get_by_test_id("pay").click()');
 });

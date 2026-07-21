@@ -7,6 +7,7 @@ QA 자동화용 웹 엘리먼트 셀렉터 추출 크롬 확장 프로그램
 - **7가지 셀렉터 자동 추출**: ID, data-testid, Class, CSS Selector, XPath, ARIA Role, Text Content
 - **유니크 셀렉터 우선 정렬**: 페이지에서 1개만 매치되는 셀렉터를 최상위로 추천
 - **Playwright 코드 자동 생성**: locator(), get_by_role(), get_by_test_id(), get_by_text() + 6가지 액션
+- **iframe 내부 요소 지원**: 프레임 안 요소도 선택 가능. Playwright 코드는 `page.frame_locator("...")` 로 자동 래핑
 - **실시간 말풍선 UI**: 호버 시 블루 아웃라인, 클릭 시 그린 강조, UNIQUE/매치 수 뱃지
 - **사이드 패널 히스토리**: 추출한 셀렉터 누적 저장, 실시간 검색, 페이지별 통계
 - **데이터 내보내기**: JSON/CSV 형식, 날짜별 파일명 자동 생성
@@ -88,11 +89,24 @@ npm test
 - 특수문자 id 의 `CSS.escape` 처리 (실제 DOM 매치까지 확인)
 - 속성 값의 큰따옴표 escape
 - `css-*` 등 동적 해시 클래스 제외
+- iframe 컨텍스트 감지(최상위/same-origin/cross-origin 폴백)와 `frame_locator` 래핑
+
+## iframe 지원
+
+content script 가 모든 프레임(`all_frames`, `about:blank`/`srcdoc` 포함)에 주입되어, iframe 안 요소도 그대로 클릭해 추출할 수 있습니다. 이때 프레임 자체를 부모 문서에서 어떻게 찾는지까지 계산해 Playwright 코드를 감쌉니다.
+
+```python
+# iframe 안 요소를 클릭한 경우 자동 생성되는 형태
+page.frame_locator("#pay").get_by_test_id("submit").click()
+```
+
+프레임 셀렉터는 `id` → `name` → `src` → `nth-of-type` 순으로 결정합니다.
 
 ## 한계 (Limitations)
 
-- iframe 내부 요소는 아직 선택할 수 없습니다 (content script 가 최상위 프레임에만 주입됨).
 - open Shadow DOM 내부 요소는 shadow host 로 리타깃되어 정밀 선택이 어려울 수 있습니다.
+- iframe 안에서는 말풍선이 그 프레임 영역 안에 그려집니다. 프레임이 작으면 잘려 보일 수 있으니 사이드 패널에서 확인하세요(기록은 정상).
+- cross-origin iframe 은 부모 문서의 iframe 엘리먼트에 접근할 수 없어, 현재 URL 기준 `iframe[src="..."]` 로 대체합니다. 부모의 실제 `src` 속성과 다르면(리다이렉트/상대경로) 수동 보정이 필요합니다.
 
 ## 기술 스택
 

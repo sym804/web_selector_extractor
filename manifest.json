@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Selector Extractor",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "QA 자동화용 웹 엘리먼트 셀렉터 추출 도구",
   "permissions": ["activeTab", "sidePanel", "storage", "clipboardWrite"],
   "action": {
@@ -23,7 +23,9 @@
       "matches": ["<all_urls>"],
       "js": ["lib/selector-engine.js", "content.js"],
       "css": ["styles/content.css"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
     }
   ],
   "icons": {
