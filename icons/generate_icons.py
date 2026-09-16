@@ -2,11 +2,10 @@
 Selector Extractor Icon Generator
 Design Philosophy: Precision Signal
 """
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import math
 import os
 
-FONT_DIR = r"C:\Users\ymseo\.claude\plugins\cache\anthropic-agent-skills\example-skills\b0cbd3df1533\skills\canvas-design\canvas-fonts"
 ICON_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
