@@ -123,7 +123,7 @@
     const header = document.createElement('div');
     header.className = 'sp-item-header';
     header.innerHTML = `
-      <span class="sp-item-tag">&lt;${item.elementInfo.tag}&gt;</span>
+      <span class="sp-item-tag">&lt;${escapeHtml(String(item.elementInfo?.tag ?? ''))}&gt;</span>
       <span class="sp-item-meta">
         <span class="sp-item-time">${timeStr}</span>
         <button class="sp-item-delete" data-idx="${idx}" title="삭제">&times;</button>

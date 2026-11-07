@@ -10,7 +10,23 @@
 - 커밋할 때 pre-commit 훅이 새 절을 검사한다. 손으로는 `python ~/.claude/tools/release-lint/run.py check <이 파일>`
 
 ## 버전 현황
-- Frontend: 1.3.1 (manifest 와 동일한 3자리 표기로 통일)
+- Frontend: 1.3.2 (manifest 와 동일한 3자리 표기로 통일)
+
+=========== 2026/11/07 릴리즈 노트 ===========
+
+## Selector Extractor 1.3.2 - [fix] 태그명 이스케이프 누락 수정(SYM-213) (2026-11-07)
+
+### 이슈
+
+SYM-213 태그명을 이스케이프하지 않고 innerHTML 에 넣는다 (bug/minor/security)
+
+### 변경
+- `content.js` 툴팁 헤더와 `sidepanel.js` 기록 헤더의 태그명을 `escapeHtml(String(x ?? ''))` 로 감쌈
+- manifest·package 버전을 노트와 같은 1.3.2 로 맞춤(이전 1.3.1 때 1.3.0 에 머물러 있었음)
+
+### 영향
+- 화면 변화 없음. 태그명이 없는 옛 기록도 목록이 그려짐
+- 검증: `npm test` 통과, QA 2인과 세션 3·4 검토 통과
 
 =========== 2026/09/16 릴리즈 노트 ===========
 

@@ -136,7 +136,7 @@
     const header = document.createElement('div');
     header.className = 'se-tooltip-header';
     header.innerHTML = `
-      <span class="se-tag">&lt;${elementInfo.tag}&gt;</span>
+      <span class="se-tag">&lt;${escapeHtml(String(elementInfo.tag ?? ''))}&gt;</span>
       ${ctx && ctx.inFrame ? '<span class="se-unique" title="iframe 내부 요소">iframe</span>' : ''}
       ${ctx && ctx.inShadow ? '<span class="se-unique" title="Shadow DOM 내부 요소">shadow</span>' : ''}
       <span>${selectors.length} selectors</span>
